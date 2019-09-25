@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+go-r53-dyndns
 
 # Test binary, built with `go test -c`
 *.test

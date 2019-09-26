@@ -43,29 +43,31 @@ func main() {
 
 	// Get ipv4 address
 	resp, err := http.Get("http://ipv4.icanhazip.com/")
-	if err != nil {
-		log.Fatalln(err)
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.Printf("IPV4 address is: %s", body)
+		ipv4 = string(body)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log.Printf("IPV4 IP Address is: %s", body)
-	ipv4 = string(body)
 
 	// Get ipv6 address
 	resp, err = http.Get("http://ipv6.icanhazip.com/")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		log.Printf("IPV6 address is: %s", body)
+		ipv6 = string(body)
 	}
 
-	log.Printf("IPV6 IP Address is: %s", body)
-	ipv6 = string(body)
+	if ipv4 == "" && ipv6 == "" {
+		log.Println("Neither ipv4 nor ipv6 addresses found. Cowardly giving up.")
+		os.Exit(2)
+	}
 }

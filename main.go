@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -63,42 +65,50 @@ func main() {
 	log.Printf("Existing IPV4 record is: %s", existingIPV4)
 	log.Printf("Existing IPV6 record is: %s", existingIPV6)
 
-	// Get ipv4 address
-	resp, err := http.Get("http://ipv4.icanhazip.com/")
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		log.Printf("Current IPV4 address is: %s", body)
-		ipv4 = string(body)
-	}
-
-	// Get ipv6 address
-	resp, err = http.Get("http://ipv6.icanhazip.com/")
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalln(err)
+	// loop until killed
+	var shouldExit bool
+	for ok := true; ok; ok = !shouldExit {
+		// Get ipv4 address
+		resp, err := http.Get("http://ipv4.icanhazip.com/")
+		if err == nil {
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			log.Printf("Current IPV4 address is: %s", body)
+			ipv4 = string(body)
 		}
 
-		log.Printf("Current IPV6 address is: %s", body)
-		ipv6 = string(body)
-	}
+		// Get ipv6 address
+		resp, err = http.Get("http://ipv6.icanhazip.com/")
+		if err == nil {
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatalln(err)
+			}
 
-	if ipv4 == "" && ipv6 == "" {
-		log.Println("Neither IPV4 nor IPV6 addresses found. Cowardly giving up with no updates.")
-		os.Exit(2)
-	}
+			log.Printf("Current IPV6 address is: %s", body)
+			ipv6 = string(body)
+		}
 
-	if ipv4 != existingIPV4 {
-		log.Println("IPV4 addresses do not match. Updating...")
-	}
+		if ipv4 == "" && ipv6 == "" {
+			log.Println("Neither IPV4 nor IPV6 addresses found. Cowardly giving up with no updates.")
+			os.Exit(2)
+		}
 
-	if ipv6 != existingIPV6 {
-		log.Println("IPV6 addresses do not match. Updating...")
+		if ipv4 != existingIPV4 {
+			log.Println("IPV4 addresses do not match. Updating...")
+		}
+
+		if ipv6 != existingIPV6 {
+			log.Println("IPV6 addresses do not match. Updating...")
+		}
+
+		// Sleep for a minute +/- 5 seconds
+		log.Println("Sleeping until next check...")
+		time.Sleep((60 * time.Second) + (time.Duration(rand.Intn(10)-5) * time.Second))
 	}
 
 	log.Println("Shutting down")

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -68,6 +69,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("Could not fetch existing records:", err)
 	}
+
 	log.Printf("Existing IPV4 record is: %s", existingIPV4)
 	log.Printf("Existing IPV6 record is: %s", existingIPV6)
 
@@ -93,12 +95,28 @@ func main() {
 			shouldExit = true
 		}
 
+		var hasChanges bool
 		if ipv4 != existingIPV4 {
 			log.Println("IPV4 addresses do not match. Updating...")
+			hasChanges = true
 		}
 
 		if ipv6 != existingIPV6 {
 			log.Println("IPV6 addresses do not match. Updating...")
+			hasChanges = true
+		}
+
+		if hasChanges {
+			err = setRecords(svc, ipv4, ipv6)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			log.Println("OK")
+
+			existingIPV4 = ipv4
+			existingIPV6 = ipv6
+		} else {
+			log.Println("No changes.")
 		}
 
 		// Sleep until next check
@@ -117,7 +135,7 @@ func getCurrentAddress(addressType string) (address string, err error) {
 		if err != nil {
 			return "", err
 		}
-		return string(body), nil
+		return strings.TrimSpace(string(body)), nil
 	}
 
 	return "", nil
@@ -148,4 +166,55 @@ func findExistingRecords(svc *route53.Route53) (existingIPV4, existingIPV6 strin
 	}
 
 	return existingIPV4, existingIPV6, nil
+}
+
+func setRecords(svc *route53.Route53, ipv4Address, ipv6Address string) (err error) {
+	var changes []*route53.Change
+
+	if ipv4Address != "" {
+		changes = append(changes, &route53.Change{
+			Action: aws.String("UPSERT"),
+			ResourceRecordSet: &route53.ResourceRecordSet{
+				Name: aws.String(domain),
+				ResourceRecords: []*route53.ResourceRecord{
+					{
+						Value: aws.String(ipv4Address),
+					},
+				},
+				TTL:  aws.Int64(300),
+				Type: aws.String("A"),
+			},
+		})
+	}
+
+	if ipv6Address != "" {
+		changes = append(changes, &route53.Change{
+			Action: aws.String("UPSERT"),
+			ResourceRecordSet: &route53.ResourceRecordSet{
+				Name: aws.String(domain),
+				ResourceRecords: []*route53.ResourceRecord{
+					{
+						Value: aws.String(ipv6Address),
+					},
+				},
+				TTL:  aws.Int64(300),
+				Type: aws.String("AAAA"),
+			},
+		})
+	}
+
+	input := &route53.ChangeResourceRecordSetsInput{
+		ChangeBatch: &route53.ChangeBatch{
+			Changes: changes,
+			Comment: aws.String("Mainted by go-r53-dyndns"),
+		},
+		HostedZoneId: aws.String(hostedZoneID),
+	}
+
+	_, err = svc.ChangeResourceRecordSets(input)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

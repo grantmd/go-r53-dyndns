@@ -23,6 +23,9 @@ var (
 	domain       string
 	hostedZoneID string
 
+	sleepDuration int
+	sleepSplay    int
+
 	ipv4 string
 	ipv6 string
 )
@@ -38,6 +41,9 @@ func main() {
 	flag.StringVar(&awsSecretAccessKey, "awsSecretAccessKey", "", "AWS secret access key")
 	flag.StringVar(&hostedZoneID, "hostedZoneID", "", "Hosted zone ID that contains the domain")
 	flag.StringVar(&domain, "domain", "", "(sub)domain to manage")
+
+	flag.IntVar(&sleepDuration, "sleepDuration", 60, "sleep duration between checks (in seconds)")
+	flag.IntVar(&sleepSplay, "sleepSplay", 5, "plus/minus seconds to splay sleep by")
 
 	flag.Parse()
 
@@ -106,9 +112,9 @@ func main() {
 			log.Println("IPV6 addresses do not match. Updating...")
 		}
 
-		// Sleep for a minute +/- 5 seconds
+		// Sleep until next check
 		log.Println("Sleeping until next check...")
-		time.Sleep((60 * time.Second) + (time.Duration(rand.Intn(10)-5) * time.Second))
+		time.Sleep((time.Duration(sleepDuration) * time.Second) + (time.Duration(rand.Intn(sleepSplay*2)-sleepSplay) * time.Second))
 	}
 
 	log.Println("Shutting down")

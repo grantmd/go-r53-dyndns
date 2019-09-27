@@ -75,33 +75,22 @@ func main() {
 	var shouldExit bool
 	for ok := true; ok; ok = !shouldExit {
 		// Get ipv4 address
-		resp, err := http.Get("http://ipv4.icanhazip.com/")
-		if err == nil {
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			log.Printf("Current IPV4 address is: %s", body)
-			ipv4 = string(body)
+		ipv4, err := getCurrentAddress("ipv4")
+		if err != nil {
+			log.Fatalln(err)
 		}
+		log.Printf("Current IPV4 address is: %s", ipv4)
 
 		// Get ipv6 address
-		resp, err = http.Get("http://ipv6.icanhazip.com/")
-		if err == nil {
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			log.Printf("Current IPV6 address is: %s", body)
-			ipv6 = string(body)
+		ipv6, err := getCurrentAddress("ipv6")
+		if err != nil {
+			log.Fatalln(err)
 		}
+		log.Printf("Current IPV6 address is: %s", ipv6)
 
 		if ipv4 == "" && ipv6 == "" {
 			log.Println("Neither IPV4 nor IPV6 addresses found. Cowardly giving up with no updates.")
-			os.Exit(2)
+			shouldExit = true
 		}
 
 		if ipv4 != existingIPV4 {
@@ -118,6 +107,20 @@ func main() {
 	}
 
 	log.Println("Shutting down")
+}
+
+func getCurrentAddress(addressType string) (address string, err error) {
+	resp, err := http.Get("http://" + addressType + ".icanhazip.com/")
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return string(body), nil
+	}
+
+	return "", nil
 }
 
 func findExistingRecords(svc *route53.Route53) (existingIPV4, existingIPV6 string, err error) {

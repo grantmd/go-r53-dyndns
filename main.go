@@ -56,7 +56,12 @@ func main() {
 	}
 
 	svc := route53.New(sess)
-	listCNAMES(svc)
+	existingIPV4, existingIPV6, err := findExistingRecords(svc)
+	if err != nil {
+		log.Fatalln("Could not fetch existing records:", err)
+	}
+	log.Printf("Existing IPV4 record is: %s", existingIPV4)
+	log.Printf("Existing IPV6 record is: %s", existingIPV6)
 
 	// Get ipv4 address
 	resp, err := http.Get("http://ipv4.icanhazip.com/")
@@ -66,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		log.Printf("IPV4 address is: %s", body)
+		log.Printf("Current IPV4 address is: %s", body)
 		ipv4 = string(body)
 	}
 
@@ -79,27 +84,49 @@ func main() {
 			log.Fatalln(err)
 		}
 
-		log.Printf("IPV6 address is: %s", body)
+		log.Printf("Current IPV6 address is: %s", body)
 		ipv6 = string(body)
 	}
 
 	if ipv4 == "" && ipv6 == "" {
-		log.Println("Neither ipv4 nor ipv6 addresses found. Cowardly giving up.")
+		log.Println("Neither IPV4 nor IPV6 addresses found. Cowardly giving up with no updates.")
 		os.Exit(2)
 	}
+
+	if ipv4 != existingIPV4 {
+		log.Println("IPV4 addresses do not match. Updating...")
+	}
+
+	if ipv6 != existingIPV6 {
+		log.Println("IPV6 addresses do not match. Updating...")
+	}
+
+	log.Println("Shutting down")
 }
 
-func listCNAMES(svc *route53.Route53) {
+func findExistingRecords(svc *route53.Route53) (existingIPV4, existingIPV6 string, err error) {
 	listParams := &route53.ListResourceRecordSetsInput{
 		HostedZoneId: aws.String(hostedZoneID),
 	}
 	respList, err := svc.ListResourceRecordSets(listParams)
 
 	if err != nil {
-		log.Println(err.Error())
-		return
+		return "", "", err
 	}
 
-	log.Println("All records:")
-	log.Println(respList)
+	for _, rs := range respList.ResourceRecordSets {
+		if aws.StringValue(rs.Name) != domain && aws.StringValue(rs.Name) != domain+"." {
+			continue
+		}
+
+		if aws.StringValue(rs.Type) == "A" {
+			existingIPV4 = aws.StringValue(rs.ResourceRecords[0].Value)
+		}
+
+		if aws.StringValue(rs.Type) == "AAAA" {
+			existingIPV6 = aws.StringValue(rs.ResourceRecords[0].Value)
+		}
+	}
+
+	return existingIPV4, existingIPV6, nil
 }

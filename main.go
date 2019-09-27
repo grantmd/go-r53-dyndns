@@ -90,26 +90,16 @@ func main() {
 }
 
 func listCNAMES(svc *route53.Route53) {
-	// Now lets list all of the records.
-	// For the life of me, I can't figure out how to get these lists to actually constrain the results.
-	// AFAICT, supplying only the HostedZoneId returns exactly the same results as any valid input in all params.
 	listParams := &route53.ListResourceRecordSetsInput{
-		HostedZoneId: aws.String(hostedZoneID), // Required
-		// MaxItems:              aws.String("100"),
-		// StartRecordIdentifier: aws.String("Sample update."),
-		// StartRecordName:       aws.String("com."),
-		// StartRecordType:       aws.String("CNAME"),
+		HostedZoneId: aws.String(hostedZoneID),
 	}
 	respList, err := svc.ListResourceRecordSets(listParams)
 
 	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
 		log.Println(err.Error())
 		return
 	}
 
-	// Pretty-print the response data.
 	log.Println("All records:")
 	log.Println(respList)
 }

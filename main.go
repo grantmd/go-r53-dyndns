@@ -38,10 +38,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	flag.StringVar(&awsAccessKeyID, "awsAccessKeyID", "", "AWS access key ID")
-	flag.StringVar(&awsSecretAccessKey, "awsSecretAccessKey", "", "AWS secret access key")
-	flag.StringVar(&hostedZoneID, "hostedZoneID", "", "Hosted zone ID that contains the domain")
-	flag.StringVar(&domain, "domain", "", "(sub)domain to manage")
+	flag.StringVar(&awsAccessKeyID, "awsAccessKeyID", os.Getenv("AWS_ACCESS_KEY_ID"), "AWS access key ID (required)")
+	flag.StringVar(&awsSecretAccessKey, "awsSecretAccessKey", os.Getenv("AWS_SECRET_ACCESS_KEY"), "AWS secret access key (required)")
+	flag.StringVar(&hostedZoneID, "hostedZoneID", os.Getenv("HOSTED_ZONE_ID"), "Hosted zone ID that contains the domain (required)")
+	flag.StringVar(&domain, "domain", os.Getenv("HOSTED_DOMAIN"), "(sub)domain to manage (required)")
 
 	flag.IntVar(&sleepDuration, "sleepDuration", 60, "sleep duration between checks (in seconds)")
 	flag.IntVar(&sleepSplay, "sleepSplay", 5, "plus/minus seconds to splay sleep by")

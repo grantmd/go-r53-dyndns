@@ -107,6 +107,7 @@ func main() {
 		}
 
 		if hasChanges {
+			// TODO: Delete records if they exist, but we no longer have an address
 			err = setRecords(svc, ipv4, ipv6)
 			if err != nil {
 				log.Fatalln(err)
